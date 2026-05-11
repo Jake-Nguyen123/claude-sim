@@ -4,9 +4,9 @@
   "version": "0.2.0-alpha.0",
   "identifier": "dev.claude-sim.cockpit",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "./node_modules/.bin/vite dev --port 1420",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "./node_modules/.bin/vite build",
     "frontendDist": "../build"
   },
   "app": {
