@@ -11,6 +11,10 @@
 
 ---
 
+> **🟢 v0.1.0-alpha.0 (2026-05-11):** MCP server works end-to-end. All 6 tools tested on Xcode 26.4.1 + iPhone 17 iOS 26.4 (see [`mcp-server/`](mcp-server/) for the code). Install today via build-from-source (instructions below). **npm publish + Homebrew tap arriving this week — ⭐ star to follow.** Tauri mirror window in v0.2. PRs and issues welcome. The gnarliest unknowns (60fps WKWebView render, CoreSimulator IOSurface on Xcode 26) are already validated and documented in [`validations/`](validations/).
+
+---
+
 ## Why
 
 When you build iOS apps with [Claude Code](https://claude.ai/code), the AI agent is **blind**.
@@ -42,18 +46,32 @@ Plus an optional **Tauri-based mirror window** so you can watch what Claude sees
 
 > **macOS only. Requires Xcode + iOS Simulator. Apple Silicon recommended.**
 
+### Try it now — build from source (2 minutes)
+
 ```bash
-# 1. Install
-npx claude-sim install        # downloads binaries, builds helpers from source
+# 1. Clone and build native helpers
+git clone https://github.com/Jake-Nguyen123/claude-sim.git
+cd claude-sim/helpers && make all          # → bin/sim-capture + bin/sim-input
 
-# 2. Register MCP server with Claude Code
-claude mcp add claude-sim npx -- claude-sim mcp
+# 2. Build the MCP server
+cd ../mcp-server
+pnpm install && pnpm build                  # → dist/index.js
 
-# 3. From your iOS project directory
-claude --print "build this app on iPhone 17, verify the login screen looks correct"
+# 3. Register with Claude Code
+claude mcp add claude-sim node $(pwd)/dist/index.js
+
+# 4. From any iOS project directory
+claude --print "boot iPhone 17, build this app, screenshot the first screen"
 ```
 
-Claude will autonomously: detect the project → boot a simulator → build → install → launch → screenshot → analyze image → report results. All without touching Xcode or Simulator.app.
+Claude will autonomously: `list_devices` → `boot_device` → `build_and_run` → `screenshot` → analyze the image. All without touching Xcode or Simulator.app.
+
+### Coming this week — npm + Homebrew
+
+```bash
+npm install -g @claude-sim/mcp-server       # ← coming
+claude mcp add claude-sim claude-sim-mcp
+```
 
 ## How it works
 
@@ -85,15 +103,21 @@ Claude will autonomously: detect the project → boot a simulator → build → 
 
 ## Status & roadmap
 
-**v0.1 (current, alpha):** iOS Simulator only, screenshot + tap + type, MCP integration, optional Tauri mirror window.
+**v0.1.0-alpha.0 (current, shipped 2026-05-11):**
+- ✅ Native helpers (CoreSimulator IOSurface mirror + Indigo HID input)
+- ✅ MCP server with 6 tools: `list_devices`, `boot_device`, `screenshot`, `tap`, `type_text`, `build_and_run`
+- ✅ End-to-end tested on Xcode 26.4.1 + iPhone 17 + iOS 26.4
+- ⏳ npm package + Homebrew tap (coming this week)
 
 **v0.2 (next):**
+- [ ] Tauri mirror window — live 60fps WKWebView panel for human watching (already validated, see `validations/`)
 - [ ] Live `simctl spawn ... log stream` exposed as MCP resource
 - [ ] Accessibility tree inspector (`describe_screen` tool)
 - [ ] Multi-simulator concurrency
-- [ ] Hot reload Flutter `--machine` daemon
+- [ ] Developer ID notarization
 
 **v0.3+:**
+- [ ] Hot reload Flutter `--machine` daemon
 - [ ] Android Emulator (gRPC EmulatorService streaming)
 - [ ] Real device support (iOS via idb, Android via scrcpy)
 - [ ] React Native Metro integration

@@ -1,0 +1,57 @@
+{
+  "name": "@claude-sim/mcp-server",
+  "version": "0.1.0-alpha.0",
+  "description": "MCP server that gives Claude Code eyes and hands on your iOS Simulator. Uses xcrun simctl + native sim-input helper for build/run/screenshot/tap/type.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "claude-sim-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "model-context-protocol",
+    "ios-simulator",
+    "ios",
+    "ai-agent",
+    "anthropic",
+    "claude",
+    "developer-tools"
+  ],
+  "author": "Thuan Nguyen <huong@dracaena.io>",
+  "license": "MIT",
+  "homepage": "https://github.com/Jake-Nguyen123/claude-sim#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jake-Nguyen123/claude-sim.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/Jake-Nguyen123/claude-sim/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "darwin"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}
