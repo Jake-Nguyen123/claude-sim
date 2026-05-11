@@ -113,7 +113,7 @@
 </div>
 
 <div
-  class="flex-1 grid place-items-center min-h-0 p-4 relative outline-none focus:bg-bg-subtle/30"
+  class="flex-1 flex items-center justify-center min-h-0 min-w-0 p-4 relative outline-none overflow-hidden focus:bg-bg-subtle/30"
   role="region"
   tabindex="0"
   aria-label="Simulator mirror — click to tap, drag to swipe, type to input"
@@ -124,7 +124,8 @@
       bind:this={img}
       {src}
       alt="iOS Simulator live mirror"
-      class="max-h-full max-w-full object-contain cursor-crosshair select-none rounded-md shadow-2xl"
+      class="block cursor-crosshair select-none rounded-md shadow-2xl"
+      style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;"
       draggable={false}
       onmousedown={onMouseDown}
       onmouseup={onMouseUp}

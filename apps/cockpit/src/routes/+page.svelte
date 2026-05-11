@@ -2,6 +2,7 @@
   import DeviceList from '$lib/DeviceList.svelte';
   import MirrorCanvas from '$lib/MirrorCanvas.svelte';
   import ActivityPanel from '$lib/ActivityPanel.svelte';
+  import StatusBar from '$lib/StatusBar.svelte';
 </script>
 
 <div class="h-screen flex flex-col bg-bg text-fg">
@@ -31,8 +32,5 @@
     </section>
   </main>
 
-  <footer class="flex items-center justify-between px-4 py-1 border-t border-bg-border bg-bg-panel text-xs text-fg-dim">
-    <span>Ready · No device selected</span>
-    <span>Phase A scaffold · Svelte 5 + Tauri 2 + Tailwind</span>
-  </footer>
+  <StatusBar />
 </div>

@@ -18,6 +18,18 @@ class DeviceStore {
   get selected() {
     return this.devices.find((d) => d.udid === this.selectedUdid) ?? null;
   }
+  /** Booted devices on top, then by runtime descending (newest first), then by name. */
+  get sortedForDisplay() {
+    return [...this.devices].sort((a, b) => {
+      if (a.state === 'Booted' && b.state !== 'Booted') return -1;
+      if (b.state === 'Booted' && a.state !== 'Booted') return 1;
+      // Runtime descending — newer iOS first
+      const ra = a.runtime;
+      const rb = b.runtime;
+      if (rb !== ra) return rb.localeCompare(ra);
+      return a.name.localeCompare(b.name);
+    });
+  }
 
   async refresh() {
     this.loading = true;

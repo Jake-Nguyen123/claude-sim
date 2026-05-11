@@ -60,7 +60,7 @@
     <div class="text-xs text-fg-dim p-2">No simulators available. Install at least one iOS runtime via Xcode.</div>
   {/if}
 
-  {#each deviceStore.devices as device (device.udid)}
+  {#each deviceStore.sortedForDisplay as device (device.udid)}
     <div
       role="button"
       tabindex="0"
