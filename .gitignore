@@ -43,6 +43,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Launch drafts — private until launch time
+launch/
+
 # Validation artifacts (huge frames.bin not for repo)
 validations/v1-wkwebview/frames.bin
 validations/v3-iosurface/frames.bin

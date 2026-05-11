@@ -1,6 +1,8 @@
 # claude-sim
 
-> **Give Claude Code eyes and hands on your iOS Simulator.**
+> **Claude Code builds your iOS app. claude-sim lets it actually test it.**
+>
+> Stop pasting screenshots into chat. Let the agent see, tap, and verify on its own.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Status: alpha](https://img.shields.io/badge/Status-alpha-orange)
@@ -15,19 +17,38 @@
 
 ---
 
-## Why
+## Vibe coding iOS, without screenshot-paste-loop
 
-When you build iOS apps with [Claude Code](https://claude.ai/code), the AI agent is **blind**.
-It can run `xcodebuild`, parse logs, write Swift — but it cannot **see** what your app actually looks like, and it cannot **interact** with it.
+When you build iOS apps with [Claude Code](https://claude.ai/code) today:
 
-You end up screenshotting Simulator.app and pasting images back into chat. Or asking Claude to "trust me, the login button is at coordinate (180, 420)". The dev loop is slow and the agent is half-blind.
+```
+You:    "Build a SwiftUI todo app with dark mode"
+Claude: writes code, runs xcodebuild — "✅ build succeeded"
+You:    *manually open Simulator, see the app, notice problem*
+You:    "the add button is hidden behind the keyboard"
+Claude: fixes, builds — "✅ done"
+You:    *manually verify again*
+        ... 4 more round trips
+```
 
-**claude-sim fixes that.** It gives Claude Code two things:
+With claude-sim:
 
-1. **Eyes** — live framebuffer mirror of any booted iOS Simulator, captured via CoreSimulator IOSurface at ~30–60 fps. No Simulator.app window needed.
-2. **Hands** — full HID input (tap, swipe, type, hardware buttons) forwarded via SimulatorKit's Indigo HID protocol — the same path facebook/idb uses.
+```
+You:    "Build a SwiftUI todo app with dark mode"
+Claude: writes code → build_and_run → screenshot →
+        "I see the add button is hidden behind the keyboard — fixing" →
+        rebuild → screenshot → "Now visible. Done."
+You:    ☕ (sipped coffee, 0 round trips)
+```
 
-Both exposed to Claude Code via [MCP](https://modelcontextprotocol.io/) — install once, then Claude can `build_and_run`, `screenshot`, `tap`, `type` autonomously.
+**claude-sim gives the agent two things it lacked:**
+
+1. **Eyes** — `screenshot` tool returns PNG/JPEG of the live simulator (CoreSimulator IOSurface, 1206×2622 native, < 200 ms).
+2. **Hands** — `tap`, `type_text`, hardware buttons via SimulatorKit's Indigo HID protocol — the same path facebook/idb uses.
+
+Plus `build_and_run` orchestrates `xcodebuild` + install + launch in one call. All exposed to Claude Code via [MCP](https://modelcontextprotocol.io/).
+
+→ **Proof it works**: see [`demo/DEMO_RESULTS.md`](demo/DEMO_RESULTS.md) — a real Claude Code session autonomously found the Settings icon via vision, tapped, observed it missed, self-corrected the Y coordinate, retried, and opened the app. The agentic loop in action.
 
 ## What you get
 
