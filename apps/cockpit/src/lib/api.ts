@@ -33,6 +33,22 @@ async function jfetch<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+export type ProjectInfo = {
+  project_type: 'xcodeproj' | 'xcworkspace';
+  path: string;
+  name: string;
+  schemes: string[];
+  configurations: string[];
+};
+
+export type BuildRequestBody = {
+  project_path: string;
+  project_type: 'xcodeproj' | 'xcworkspace';
+  scheme: string;
+  udid: string;
+  launch?: boolean;
+};
+
 export const api = {
   health: () => jfetch<HealthStatus>('/api/health'),
 
@@ -41,6 +57,14 @@ export const api = {
     jfetch<{ ok: true; already_booted?: boolean }>(`/api/devices/${udid}/boot`, { method: 'POST' }),
   shutdownDevice: (udid: string) =>
     jfetch<{ ok: true }>(`/api/devices/${udid}/shutdown`, { method: 'POST' }),
+
+  detectProject: (path: string) =>
+    jfetch<ProjectInfo>(`/api/project/detect?path=${encodeURIComponent(path)}`),
+  startBuild: (body: BuildRequestBody) =>
+    jfetch<{ build_id: string }>('/api/build', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }),
 
   tap: (udid: string, x: number, y: number, holdMs = 80) =>
     jfetch<{ ok: true }>('/api/input/tap', {

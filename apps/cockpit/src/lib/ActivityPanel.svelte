@@ -3,8 +3,14 @@
   import { mcpStore } from '$lib/stores/mcp.svelte';
   import { logsStore } from '$lib/stores/logs.svelte';
   import { deviceStore } from '$lib/stores/devices.svelte';
+  import { buildStore } from '$lib/stores/build.svelte';
 
   let tab = $state<'logs' | 'mcp' | 'build'>('mcp');
+
+  // Auto-switch to Build tab when a build is running.
+  $effect(() => {
+    if (buildStore.status === 'running') tab = 'build';
+  });
 
   onMount(() => mcpStore.start());
   onDestroy(() => {
@@ -108,9 +114,55 @@
     {/if}
 
   {:else}
-    <div class="text-fg-dim space-y-1">
-      <div>No build in progress.</div>
-      <div class="opacity-60 italic">Click "Build &amp; Run" in the left panel (Phase D wires this up).</div>
-    </div>
+    {#if buildStore.status === 'idle' && buildStore.lines.length === 0}
+      <div class="text-fg-dim space-y-1">
+        <div>No build in progress.</div>
+        <div class="opacity-60 italic">Open a project and click "Build &amp; Run" in the left panel.</div>
+      </div>
+    {:else}
+      <div class="space-y-2">
+        <div class="flex items-center gap-3 text-xs">
+          {#if buildStore.status === 'running'}
+            <span class="text-yellow-400">⏳ {buildStore.phase ?? 'running'}</span>
+          {:else if buildStore.status === 'ok'}
+            <span class="text-green-400">✅ {(buildStore.duration_ms / 1000).toFixed(1)}s</span>
+          {:else if buildStore.status === 'error'}
+            <span class="text-red-400">❌ failed</span>
+          {/if}
+          {#if buildStore.bundleId}
+            <span class="text-fg-dim">{buildStore.bundleId}</span>
+          {/if}
+          {#if buildStore.errors.length > 0}
+            <span class="text-red-400">{buildStore.errors.length} error{buildStore.errors.length === 1 ? '' : 's'}</span>
+          {/if}
+          {#if buildStore.warnings.length > 0}
+            <span class="text-yellow-400">{buildStore.warnings.length} warning{buildStore.warnings.length === 1 ? '' : 's'}</span>
+          {/if}
+        </div>
+
+        {#if buildStore.errors.length > 0}
+          <div class="space-y-1">
+            {#each buildStore.errors as d}
+              <div class="text-xs border-l-2 border-red-500 pl-2 py-1 bg-red-950/30">
+                <div class="font-semibold text-red-400">error: {d.message}</div>
+                {#if d.file}
+                  <div class="text-fg-dim">{d.file}:{d.line ?? '?'}{d.col ? `:${d.col}` : ''}</div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        {#if buildStore.finalError}
+          <div class="text-xs border-l-2 border-red-500 pl-2 text-red-400">{buildStore.finalError}</div>
+        {/if}
+
+        <div class="text-fg-dim space-y-0.5 max-h-96 overflow-y-auto">
+          {#each buildStore.lines.slice(-150) as line}
+            <div class="break-all">{line}</div>
+          {/each}
+        </div>
+      </div>
+    {/if}
   {/if}
 </div>

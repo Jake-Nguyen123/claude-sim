@@ -14,6 +14,9 @@ pub struct AppState {
     pub helpers_dir: PathBuf,
     pub inputs: RwLock<HashMap<String, InputHandle>>,
     pub mcp_events: broadcast::Sender<serde_json::Value>,
+    /// Active builds — broadcast a stream of BuildEvent per build_id so the
+    /// SSE endpoint can subscribe.
+    pub builds: RwLock<HashMap<String, broadcast::Sender<crate::build::BuildEvent>>>,
 }
 
 impl AppState {
@@ -25,6 +28,7 @@ impl AppState {
             helpers_dir,
             inputs: RwLock::new(HashMap::new()),
             mcp_events,
+            builds: RwLock::new(HashMap::new()),
         })
     }
 }

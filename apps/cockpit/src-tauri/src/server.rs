@@ -1,7 +1,7 @@
 // Axum localhost server — all UI ↔ backend traffic.
 
 use crate::state::AppState;
-use crate::{input, mirror, simctl};
+use crate::{build, input, mirror, project, simctl};
 use anyhow::Result;
 use axum::extract::{Json, Path, Query, State};
 use axum::http::StatusCode;
@@ -12,6 +12,7 @@ use axum::Router;
 use futures_util::stream::Stream;
 use serde::Deserialize;
 use std::convert::Infallible;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
@@ -27,6 +28,9 @@ pub async fn serve(state: Arc<AppState>, port: u16) -> Result<()> {
         .route("/api/input/swipe", post(swipe_handler))
         .route("/api/input/key-tap", post(key_tap_handler))
         .route("/api/input/button-tap", post(button_tap_handler))
+        .route("/api/project/detect", get(detect_project_handler))
+        .route("/api/build", post(build_handler))
+        .route("/api/build/:id/events", get(build_events_handler))
         .route("/api/mcp-events", get(mcp_events_handler))
         .layer(CorsLayer::permissive())
         .with_state(state);
@@ -150,4 +154,68 @@ async fn mcp_events_handler(
         }
     };
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+#[derive(Deserialize)]
+struct DetectProjectQuery {
+    path: String,
+}
+
+async fn detect_project_handler(
+    Query(q): Query<DetectProjectQuery>,
+    State(_): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    match project::detect(&PathBuf::from(&q.path)).await {
+        Ok(info) => Json(info).into_response(),
+        Err(e) => err_response(e),
+    }
+}
+
+async fn build_handler(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<build::BuildRequest>,
+) -> impl IntoResponse {
+    // Allocate a build_id and a broadcast channel, then kick off in background.
+    let build_id = format!("b{:x}", std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0));
+    let (tx, _) = tokio::sync::broadcast::channel::<build::BuildEvent>(256);
+    state.builds.write().insert(build_id.clone(), tx.clone());
+
+    let bid = build_id.clone();
+    let state_clone = state.clone();
+    let tx_for_task = tx.clone();
+    tokio::spawn(async move {
+        let _ = build::run(body, tx_for_task, bid.clone()).await;
+        // Keep sender alive briefly for late subscribers, then drop.
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        state_clone.builds.write().remove(&bid);
+    });
+
+    Json(serde_json::json!({ "build_id": build_id })).into_response()
+}
+
+async fn build_events_handler(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    let tx = match state.builds.read().get(&id).cloned() {
+        Some(tx) => tx,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                format!("build {} not found or already expired", id),
+            )
+                .into_response();
+        }
+    };
+    let mut rx = tx.subscribe();
+    let stream = async_stream::stream! {
+        while let Ok(evt) = rx.recv().await {
+            let json = serde_json::to_string(&evt).unwrap_or_else(|_| "{}".into());
+            yield Ok::<Event, Infallible>(Event::default().data(json));
+        }
+    };
+    Sse::new(stream).keep_alive(KeepAlive::default()).into_response()
 }

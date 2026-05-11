@@ -1,5 +1,7 @@
+mod build;
 mod input;
 mod mirror;
+mod project;
 mod server;
 mod simctl;
 mod state;

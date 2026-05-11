@@ -1,10 +1,38 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { deviceStore } from '$lib/stores/devices.svelte';
+  import { projectStore } from '$lib/stores/project.svelte';
+  import { buildStore } from '$lib/stores/build.svelte';
   import type { Device } from '$lib/api';
 
   onMount(() => deviceStore.startPolling());
   onDestroy(() => deviceStore.stopPolling());
+
+  let projectPathInput = $state('');
+
+  async function openProject() {
+    const path = window.prompt('Path to folder containing .xcodeproj or .xcworkspace:', projectPathInput || '/Users/ospreymac/');
+    if (!path) return;
+    projectPathInput = path;
+    await projectStore.open(path);
+  }
+
+  async function buildAndRun() {
+    const info = projectStore.info;
+    const scheme = projectStore.selectedScheme;
+    const dev = deviceStore.booted[0] ?? deviceStore.selected;
+    if (!info || !scheme || !dev) return;
+    if (dev.state !== 'Booted') {
+      await deviceStore.boot(dev.udid);
+    }
+    await buildStore.start({
+      project_path: info.path,
+      project_type: info.project_type,
+      scheme,
+      udid: dev.udid,
+      launch: true
+    });
+  }
 
   function bootedIcon(state: Device['state']) {
     return state === 'Booted' ? '🟢' : state === 'Booting' ? '🟡' : '⚪';
@@ -95,11 +123,54 @@
 
 <div class="border-t border-bg-border p-3 space-y-2">
   <div class="panel-header !border-0 !p-0">Project</div>
-  <div class="text-xs text-fg-muted">
-    <div class="font-mono text-fg-dim truncate">No project opened</div>
-    <div class="mt-1">Pick a folder with an .xcodeproj or .xcworkspace</div>
-  </div>
-  <button class="btn w-full text-xs" disabled>Open project…</button>
-  <button class="btn-accent w-full text-xs" disabled>▶ Build &amp; Run</button>
-  <div class="text-xs text-fg-dim text-center opacity-60">Phase D wires up build/run</div>
+  {#if projectStore.error}
+    <div class="text-xs text-red-400 break-all">{projectStore.error}</div>
+  {/if}
+  {#if projectStore.info}
+    <div class="text-xs">
+      <div class="font-semibold text-fg">{projectStore.info.name}</div>
+      <div class="font-mono text-fg-dim truncate" title={projectStore.info.path}>{projectStore.info.path}</div>
+    </div>
+    <div>
+      <label class="block text-xs text-fg-muted mb-1" for="scheme-sel">Scheme</label>
+      <select
+        id="scheme-sel"
+        class="w-full bg-bg-subtle border border-bg-border rounded px-2 py-1 text-xs focus:outline-none focus:border-accent"
+        bind:value={projectStore.selectedScheme}
+        disabled={buildStore.status === 'running'}
+      >
+        {#each projectStore.info.schemes as scheme}
+          <option value={scheme}>{scheme}</option>
+        {/each}
+      </select>
+    </div>
+  {:else if projectStore.loading}
+    <div class="text-xs text-fg-muted">Detecting project…</div>
+  {:else}
+    <div class="text-xs text-fg-muted">
+      <div class="font-mono text-fg-dim">No project opened</div>
+      <div class="mt-1">Pick a folder with an .xcodeproj or .xcworkspace</div>
+    </div>
+  {/if}
+  <button class="btn w-full text-xs" onclick={openProject} disabled={buildStore.status === 'running'}>
+    {projectStore.info ? 'Switch project…' : 'Open project…'}
+  </button>
+  <button
+    class="btn-accent w-full text-xs"
+    onclick={buildAndRun}
+    disabled={!projectStore.info || !projectStore.selectedScheme || buildStore.status === 'running' || deviceStore.booted.length === 0}
+  >
+    {#if buildStore.status === 'running'}
+      ⏳ {buildStore.phase ?? 'Building'}…
+    {:else if buildStore.status === 'ok'}
+      ✅ Build &amp; Run ({(buildStore.duration_ms / 1000).toFixed(1)}s) — run again
+    {:else if buildStore.status === 'error'}
+      ❌ Build failed — try again
+    {:else}
+      ▶ Build &amp; Run
+    {/if}
+  </button>
+  {#if !deviceStore.booted.length && projectStore.info}
+    <div class="text-xs text-yellow-400 text-center">Boot a simulator first</div>
+  {/if}
 </div>

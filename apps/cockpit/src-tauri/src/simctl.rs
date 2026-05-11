@@ -90,3 +90,39 @@ pub async fn shutdown(udid: &str) -> Result<()> {
         .await?;
     Ok(())
 }
+
+pub async fn install(udid: &str, app_path: &str) -> Result<()> {
+    let status = Command::new("xcrun")
+        .args(["simctl", "install", udid, app_path])
+        .status()
+        .await
+        .context("xcrun simctl install failed to spawn")?;
+    if !status.success() {
+        anyhow::bail!("simctl install exit {}", status);
+    }
+    Ok(())
+}
+
+/// Returns the launched process pid (or -1 if not parseable).
+pub async fn launch(udid: &str, bundle_id: &str) -> Result<i32> {
+    let output = Command::new("xcrun")
+        .args(["simctl", "launch", udid, bundle_id])
+        .output()
+        .await
+        .context("xcrun simctl launch failed")?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "simctl launch exit {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    // Output: "<bundle_id>: <pid>"
+    let s = String::from_utf8_lossy(&output.stdout);
+    let pid = s
+        .split(':')
+        .nth(1)
+        .and_then(|t| t.trim().parse::<i32>().ok())
+        .unwrap_or(-1);
+    Ok(pid)
+}
