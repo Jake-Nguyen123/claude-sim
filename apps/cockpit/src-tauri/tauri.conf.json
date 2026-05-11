@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "claude-sim",
+  "version": "0.2.0-alpha.0",
+  "identifier": "dev.claude-sim.cockpit",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "claude-sim — Dev Cockpit",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 1000,
+        "minHeight": 700,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "copyright": "Copyright (c) 2026 Thuan Nguyen",
+    "category": "DeveloperTool",
+    "shortDescription": "Dev cockpit for AI coding agents on iOS Simulator",
+    "longDescription": "claude-sim gives Claude Code (and any MCP-compatible AI agent) eyes and hands on your iOS Simulator. Live framebuffer mirror, click-to-tap, build orchestration, and MCP activity monitor — all in one window."
+  }
+}

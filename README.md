@@ -13,7 +13,9 @@
 
 ---
 
-> **🟢 v0.1.0-alpha.0 (2026-05-11):** MCP server works end-to-end. All 6 tools tested on Xcode 26.4.1 + iPhone 17 iOS 26.4 (see [`mcp-server/`](mcp-server/) for the code). Install today via build-from-source (instructions below). **npm publish + Homebrew tap arriving this week — ⭐ star to follow.** Tauri mirror window in v0.2. PRs and issues welcome. The gnarliest unknowns (60fps WKWebView render, CoreSimulator IOSurface on Xcode 26) are already validated and documented in [`validations/`](validations/).
+> **🟡 v0.1.0-alpha.0 (2026-05-11) — quiet alpha, working toward v0.2 Cockpit:** MCP server works end-to-end (all 6 tools tested on Xcode 26.4.1 + iPhone 17 iOS 26.4). But the headline feature is **v0.2 — a Tauri "Dev Cockpit"** with live 60fps simulator mirror, click-to-tap interaction, build orchestration, and MCP activity monitor. Active development in [`apps/cockpit/`](apps/cockpit/). **ETA: ~6 weeks.** ⭐ star + 👀 watch for the v0.2 launch.
+
+> **Currently quiet on social** — public alpha repo but no HN/Twitter posts until v0.2 ships with the visual cockpit. We're saving the launch burst for when the wow factor is real, not just an MCP server. Read [`~/.claude/plans/claude-sim-cockpit-v0.2.md`](#) for the full v0.2 plan once it lands in `docs/`.
 
 ---
 

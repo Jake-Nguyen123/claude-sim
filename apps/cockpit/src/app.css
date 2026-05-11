@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-bg text-fg antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  body {
+    @apply h-screen overflow-hidden;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-bg-panel border border-bg-border rounded-lg;
+  }
+  .panel-header {
+    @apply text-xs uppercase tracking-wider text-fg-muted px-3 py-2 border-b border-bg-border;
+  }
+  .btn {
+    @apply px-3 py-1.5 rounded text-sm font-medium transition-colors duration-100
+           border border-bg-border bg-bg-subtle hover:bg-bg-hover text-fg;
+  }
+  .btn-accent {
+    @apply btn bg-accent border-accent-600 text-white hover:bg-accent-600;
+  }
+  .device-item {
+    @apply flex items-center gap-2 px-3 py-2 rounded text-sm
+           cursor-pointer hover:bg-bg-hover transition-colors;
+  }
+  .device-item-active {
+    @apply bg-bg-subtle border-l-2 border-accent;
+  }
+}
