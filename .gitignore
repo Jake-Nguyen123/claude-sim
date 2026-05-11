@@ -1,0 +1,55 @@
+# Reference clones (not part of our code)
+refs/
+
+# Build artifacts
+target/
+build/
+*.o
+*.dylib
+.build/
+DerivedData/
+helpers/bin/
+
+# Node
+node_modules/
+*.log
+.pnpm-store/
+
+# Swift
+*.xcodeproj/xcuserdata/
+*.swiftpm/
+.swiftpm/
+
+# Rust / Cargo
+/Cargo.lock
+**/*.rs.bk
+
+# Tauri
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Validation artifacts (huge frames.bin not for repo)
+validations/v1-wkwebview/frames.bin
+validations/v3-iosurface/frames.bin
+validations/v3-iosurface/sim-capture
+validations/v3-iosurface/frame0.jpg
+validations/v3-iosurface/stderr.log
+validations/v3-iosurface/compile.log
+validations/v1-wkwebview/wkwebview-test
+validations/v1-wkwebview/compile.log
+validations/v1-wkwebview/server.log

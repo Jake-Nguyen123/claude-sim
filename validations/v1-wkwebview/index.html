@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>V1 — WKWebView MJPEG FPS test</title>
+<style>
+  body { background:#000; color:#0f0; font-family:monospace; margin:0; padding:8px; }
+  #stage { display:flex; gap:12px; }
+  #stream { width:402px; height:874px; background:#222; image-rendering:auto; }
+  #stats { padding:12px; }
+  .k { color:#0ff; }
+  .v { color:#fff; font-size:24px; }
+  .ok { color:#0f0; }
+  .warn { color:#fa0; }
+  .bad { color:#f00; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="stream" src="/stream.mjpg" alt="MJPEG stream">
+  <div id="stats">
+    <div><span class="k">Rendered FPS:</span> <span id="fps" class="v">—</span></div>
+    <div><span class="k">Frame count:</span> <span id="frames" class="v">0</span></div>
+    <div><span class="k">Elapsed:</span> <span id="time" class="v">0</span> s</div>
+    <div><span class="k">Decoded size:</span> <span id="size" class="v">—</span></div>
+    <div><span class="k">Test duration:</span> 15 s</div>
+    <hr>
+    <div><span class="k">Verdict:</span> <span id="verdict" class="v">running…</span></div>
+    <hr>
+    <div style="color:#888; font-size:12px;">
+      Target: sustained ≥30fps in WebKit (Safari/WKWebView).<br>
+      MJPEG via &lt;img&gt; — same path Tauri WKWebView would use.<br>
+      Real-world FPS will differ since damage events trigger frames, not fixed clock.
+    </div>
+  </div>
+</div>
+<script>
+const img = document.getElementById('stream');
+const fpsEl = document.getElementById('fps');
+const framesEl = document.getElementById('frames');
+const timeEl = document.getElementById('time');
+const sizeEl = document.getElementById('size');
+const verdictEl = document.getElementById('verdict');
+
+let frameCount = 0;
+let lastFrameTime = performance.now();
+let startTime = null;
+const samples = [];
+
+// MJPEG <img> doesn't fire "load" per frame in WebKit. Use rAF + visual decode timing.
+let prevPaint = null;
+function tick(now) {
+  if (startTime === null) startTime = now;
+  if (prevPaint !== null) {
+    samples.push(now - prevPaint);
+    if (samples.length > 120) samples.shift();
+  }
+  prevPaint = now;
+  frameCount++;
+  framesEl.textContent = frameCount;
+  const elapsed = (now - startTime) / 1000;
+  timeEl.textContent = elapsed.toFixed(1);
+  if (samples.length > 30) {
+    const avg = samples.reduce((a,b)=>a+b,0) / samples.length;
+    const fps = 1000 / avg;
+    fpsEl.textContent = fps.toFixed(1);
+    if (fps >= 50) { fpsEl.className = 'v ok'; verdictEl.textContent = 'PASS (high)'; verdictEl.className = 'v ok'; }
+    else if (fps >= 30) { fpsEl.className = 'v ok'; verdictEl.textContent = 'PASS'; verdictEl.className = 'v ok'; }
+    else if (fps >= 20) { fpsEl.className = 'v warn'; verdictEl.textContent = 'MARGINAL'; verdictEl.className = 'v warn'; }
+    else { fpsEl.className = 'v bad'; verdictEl.textContent = 'FAIL'; verdictEl.className = 'v bad'; }
+  }
+  if (img.naturalWidth) {
+    sizeEl.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
+  }
+  if (elapsed < 15) {
+    requestAnimationFrame(tick);
+  } else {
+    // Final report
+    if (samples.length) {
+      const avg = samples.reduce((a,b)=>a+b,0) / samples.length;
+      const fps = 1000 / avg;
+      verdictEl.textContent += ` — final ${fps.toFixed(1)} fps over ${frameCount} paints`;
+    }
+    // Surface result so Bash can scrape via console
+    console.log(`V1_RESULT fps=${fpsEl.textContent} frames=${frameCount} verdict=${verdictEl.textContent}`);
+    document.title = `V1: ${verdictEl.textContent}`;
+  }
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
