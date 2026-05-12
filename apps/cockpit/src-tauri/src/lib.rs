@@ -1,5 +1,6 @@
 mod build;
 mod input;
+mod logs;
 mod mirror;
 mod project;
 mod server;

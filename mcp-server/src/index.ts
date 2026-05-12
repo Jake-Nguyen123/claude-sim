@@ -16,12 +16,53 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 
 import { listDevices, bootDevice, takeScreenshot, installApp, launchApp } from "./adapters/simctl.js";
 import { tap, typeText, buttonTap, shutdownAllInputs } from "./adapters/input.js";
 import { detectXcodeProject, listSchemes, buildForSimulator } from "./adapters/build.js";
 
 const VERSION = "0.1.0-alpha.0";
+const COCKPIT_URL = process.env.CLAUDE_SIM_COCKPIT_URL ?? "http://127.0.0.1:8765";
+
+// Best-effort: ship one telemetry event to the Cockpit UI. Silently swallow
+// any error (no Cockpit running = MCP server still useful as a pure MCP server).
+async function emitToCockpit(event: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`${COCKPIT_URL}/api/mcp-events/push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(event),
+      // 2s timeout in case Cockpit is slow/unreachable
+      signal: AbortSignal.timeout(2000),
+    });
+  } catch {
+    // ignored
+  }
+}
+
+function shortJson(value: unknown, max = 200): string {
+  try {
+    const s = JSON.stringify(value);
+    return s.length > max ? s.slice(0, max - 1) + "…" : s;
+  } catch {
+    return String(value).slice(0, max);
+  }
+}
+
+function summarizeResult(result: { content?: Array<{ type: string; text?: string; mimeType?: string }> }): string {
+  const content = result?.content ?? [];
+  if (content.length === 0) return "(no content)";
+  const parts: string[] = [];
+  for (const c of content) {
+    if (c.type === "text" && c.text) {
+      parts.push(c.text.length > 120 ? c.text.slice(0, 119) + "…" : c.text);
+    } else if (c.type === "image") {
+      parts.push(`(image: ${c.mimeType ?? "image"})`);
+    }
+  }
+  return parts.join(" · ").slice(0, 200);
+}
 
 const TOOLS = [
   {
@@ -112,6 +153,54 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }))
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const { name, arguments: args = {} } = req.params as { name: string; arguments?: Record<string, unknown> };
+  const eventId = randomUUID();
+  const startTime = Date.now();
+
+  // Pre-call event — surfaces in Cockpit's MCP Activity panel as a pending row
+  void emitToCockpit({
+    id: eventId,
+    ts: startTime,
+    tool: name,
+    args_summary: shortJson(args),
+    status: "pending",
+  });
+
+  let result: ReturnType<typeof jsonResult> | { content: unknown[]; isError?: boolean };
+  let isError = false;
+  let errorMessage: string | undefined;
+
+  try {
+    result = await dispatchTool(name, args);
+    isError = !!(result as { isError?: boolean })?.isError;
+    if (isError) {
+      const first = (result as { content?: Array<{ text?: string }> })?.content?.[0];
+      errorMessage = typeof first?.text === "string" ? first.text.slice(0, 200) : undefined;
+    }
+  } catch (e: unknown) {
+    isError = true;
+    errorMessage = (e as Error)?.message ?? String(e);
+    result = jsonResult({ error: errorMessage, stack: (e as Error)?.stack }, true);
+  }
+
+  // Post-call event — Cockpit replaces the pending row with ok/error + duration
+  void emitToCockpit({
+    id: eventId,
+    ts: Date.now(),
+    tool: name,
+    args_summary: shortJson(args),
+    duration_ms: Date.now() - startTime,
+    status: isError ? "error" : "ok",
+    result_summary: isError ? undefined : summarizeResult(result as { content?: Array<{ type: string; text?: string; mimeType?: string }> }),
+    error: errorMessage,
+  });
+
+  return result;
+});
+
+async function dispatchTool(
+  name: string,
+  args: Record<string, unknown>,
+) {
   try {
     switch (name) {
       case "list_devices": {
@@ -245,7 +334,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   } catch (e: any) {
     return jsonResult({ error: e?.message ?? String(e), stack: e?.stack }, true);
   }
-});
+}
 
 async function resolveUDID(a: { udid?: string; name?: string }): Promise<string> {
   if (a.udid) return a.udid;

@@ -17,6 +17,9 @@ pub struct AppState {
     /// Active builds — broadcast a stream of BuildEvent per build_id so the
     /// SSE endpoint can subscribe.
     pub builds: RwLock<HashMap<String, broadcast::Sender<crate::build::BuildEvent>>>,
+    /// Long-lived `simctl log stream` children keyed by UDID. Phase E wires
+    /// them up; on first subscribe we spawn, late subscribers reuse.
+    pub log_streams: RwLock<HashMap<String, broadcast::Sender<crate::logs::LogLine>>>,
 }
 
 impl AppState {
@@ -29,6 +32,7 @@ impl AppState {
             inputs: RwLock::new(HashMap::new()),
             mcp_events,
             builds: RwLock::new(HashMap::new()),
+            log_streams: RwLock::new(HashMap::new()),
         })
     }
 }

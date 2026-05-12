@@ -1,7 +1,7 @@
 // Axum localhost server — all UI ↔ backend traffic.
 
 use crate::state::AppState;
-use crate::{build, input, mirror, project, simctl};
+use crate::{build, input, logs, mirror, project, simctl};
 use anyhow::Result;
 use axum::extract::{Json, Path, Query, State};
 use axum::http::StatusCode;
@@ -32,6 +32,8 @@ pub async fn serve(state: Arc<AppState>, port: u16) -> Result<()> {
         .route("/api/build", post(build_handler))
         .route("/api/build/:id/events", get(build_events_handler))
         .route("/api/mcp-events", get(mcp_events_handler))
+        .route("/api/mcp-events/push", post(mcp_events_push_handler))
+        .route("/api/logs", get(logs_handler))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
@@ -194,6 +196,34 @@ async fn build_handler(
     });
 
     Json(serde_json::json!({ "build_id": build_id })).into_response()
+}
+
+#[derive(Deserialize)]
+struct LogsQuery {
+    udid: String,
+}
+
+async fn logs_handler(
+    Query(q): Query<LogsQuery>,
+    State(state): State<Arc<AppState>>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let tx = logs::ensure_stream(&state, &q.udid);
+    let mut rx = tx.subscribe();
+    let stream = async_stream::stream! {
+        while let Ok(line) = rx.recv().await {
+            let json = serde_json::to_string(&line).unwrap_or_else(|_| "{}".into());
+            yield Ok::<Event, Infallible>(Event::default().data(json));
+        }
+    };
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+async fn mcp_events_push_handler(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let _ = state.mcp_events.send(body);
+    Json(serde_json::json!({ "ok": true })).into_response()
 }
 
 async fn build_events_handler(
